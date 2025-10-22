@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad Clustering</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1>🎯 Ad Clustering</h1>
+            <p>Process and cluster your advertisement images using AI</p>
+        </div>
+
+        <div class="content-grid">
+            <div class="card">
+                <div class="clusters-header">
+                    <h2 class="card-title">📊 Existing Clusters</h2>
+                    <button id="refreshBtn">🔄 Refresh</button>
+                </div>
+
+                <div id="clustersContainer">
+                    <div class="loading-message">
+                        <div class="spinner" style="border-color: #ddd; border-top-color: #667eea; margin: 0 auto;"></div>
+                        <p style="margin-top: 1rem;">Loading clusters...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">📤 Process Images</h2>
+
+                <div class="dataset-section">
+                    <label>Select Data Source</label>
+                    <div class="dataset-buttons">
+                        <button class="dataset-btn" data-dataset="nike">
+                            <div class="dataset-btn-icon">👟</div>
+                            <div class="dataset-btn-title">Nike Dataset</div>
+                        </button>
+                        <button class="dataset-btn" data-dataset="gonoise">
+                            <div class="dataset-btn-icon">🎧</div>
+                            <div class="dataset-btn-title">GoNoise Dataset</div>
+                        </button>
+                        <button class="dataset-btn" data-dataset="levis-1">
+                            <div class="dataset-btn-icon">👖</div>
+                            <div class="dataset-btn-title">Levi's Dataset</div>
+                        </button>
+                        <button class="dataset-btn" data-dataset="vibemyad">
+                            <div class="dataset-btn-icon">🌐</div>
+                            <div class="dataset-btn-title">VibeMyAd API</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="name-input-section">
+                    <label for="clusterName">Cluster Job Name *</label>
+                    <input
+                        type="text"
+                        id="clusterName"
+                        placeholder="Enter a name for this clustering job (required)"
+                    />
+                </div>
+
+                <div class="vibemyad-input-section" id="vibemyadSection" style="display: none;">
+                    <label for="brandKey">Brand Key (for VibeMyAd API) *</label>
+                    <input
+                        type="text"
+                        id="brandKey"
+                        placeholder="e.g., uber, nike, adidas"
+                    />
+                    <p class="example-text">💡 Enter the brand key to fetch images from VibeMyAd API</p>
+                </div>
+
+                <div class="input-section">
+                    <label for="urlsInput">Or Enter Custom Image URLs</label>
+                    <textarea
+                        id="urlsInput"
+                        placeholder="https://example.com/ad1.jpg
+https://example.com/ad2.jpg
+https://example.com/ad3.jpg"
+                    ></textarea>
+                    <div class="url-counter">
+                        <span id="urlCount">0</span> URLs entered
+                    </div>
+                    <p class="example-text">💡 Tip: Enter one URL per line</p>
+                </div>
+
+                <div class="button-group">
+                    <button id="clearBtn">Clear</button>
+                    <button id="processBtn">
+                        <span id="btnText">Process Images</span>
+                    </button>
+                </div>
+
+                <div id="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
