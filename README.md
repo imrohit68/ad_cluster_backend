@@ -9,6 +9,7 @@
 - [Embedding Generation](#embedding-generation-custom-dinov2-implementation)
 - [Clustering Algorithm](#clustering-service-recursive-hierarchical-faiss-clustering)
 - [Ideal Architecture](#ideal-architecture)
+- [Metrics](#metrics)
 
 ---
 
@@ -143,3 +144,7 @@ Users can query the processing status using their job ID. The system maintains j
 This approach scales horizontally for uploads, reduces backend load by offloading file transfer to S3, and enables asynchronous processing that can handle variable clustering computation times without blocking client connections.
 
 ---
+
+# Metrics
+
+- **Pipeline execution time:** On Mac M1, full pipeline takes around **100 seconds for 250 images**.
