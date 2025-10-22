@@ -1,6 +1,7 @@
 # Ad Clustering Backend
 
-[![Watch the demo](https://drive.google.com/file/d/1l0nMM3VqLv9PWRTv9-L2NmVREAO_ENwI/view?usp=sharing)]
+## Watch Short Demo Of Results
+- https://drive.google.com/file/d/1l0nMM3VqLv9PWRTv9-L2NmVREAO_ENwI/view?usp=sharing
 
 ## 📑 Navigation
 
