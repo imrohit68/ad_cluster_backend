@@ -1,16 +1,11 @@
-// Dataset URLs configuration
-const DATASET_URLS = {
-    nike: [],
-    go_noise: [],
-    levis: []
-};
-
 // DOM Elements
 const processBtn = document.getElementById('processBtn');
 const clearBtn = document.getElementById('clearBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const urlsInput = document.getElementById('urlsInput');
 const clusterNameInput = document.getElementById('clusterName');
+const brandKeyInput = document.getElementById('brandKey');
+const vibemyadSection = document.getElementById('vibemyadSection');
 const statusDiv = document.getElementById('status');
 const urlCount = document.getElementById('urlCount');
 const btnText = document.getElementById('btnText');
@@ -26,6 +21,10 @@ datasetButtons.forEach(btn => {
         if (selectedDataset === dataset) {
             selectedDataset = null;
             btn.classList.remove('active');
+            if (dataset === 'vibemyad') {
+                vibemyadSection.style.display = 'none';
+                brandKeyInput.value = '';
+            }
         } else {
             datasetButtons.forEach(b => b.classList.remove('active'));
             selectedDataset = dataset;
@@ -33,6 +32,15 @@ datasetButtons.forEach(btn => {
             clusterNameInput.focus();
             urlsInput.value = '';
             updateUrlCount();
+
+            // Show/hide VibeMyAd section
+            if (dataset === 'vibemyad') {
+                vibemyadSection.style.display = 'block';
+                brandKeyInput.focus();
+            } else {
+                vibemyadSection.style.display = 'none';
+                brandKeyInput.value = '';
+            }
         }
     });
 });
@@ -48,6 +56,8 @@ urlsInput.addEventListener('input', () => {
     if (urlsInput.value.trim()) {
         selectedDataset = null;
         datasetButtons.forEach(b => b.classList.remove('active'));
+        vibemyadSection.style.display = 'none';
+        brandKeyInput.value = '';
     }
 });
 
@@ -55,8 +65,10 @@ urlsInput.addEventListener('input', () => {
 clearBtn.addEventListener('click', () => {
     urlsInput.value = '';
     clusterNameInput.value = '';
+    brandKeyInput.value = '';
     selectedDataset = null;
     datasetButtons.forEach(b => b.classList.remove('active'));
+    vibemyadSection.style.display = 'none';
     updateUrlCount();
     statusDiv.classList.remove('show');
 });
@@ -85,6 +97,56 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Fetch URLs from predefined dataset
+async function fetchDatasetUrls(datasetKey) {
+    try {
+        const response = await fetch(`/fetch-images/${datasetKey}`);
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`No images found for dataset: ${datasetKey}`);
+            }
+            throw new Error(`Failed to fetch dataset: ${response.status} ${response.statusText}`);
+        }
+
+        const urls = await response.json();
+
+        if (!urls || urls.length === 0) {
+            throw new Error(`No images found for dataset: ${datasetKey}`);
+        }
+
+        return urls;
+    } catch (err) {
+        console.error(`Error fetching dataset ${datasetKey}:`, err);
+        throw new Error(`Failed to fetch ${datasetKey} dataset: ${err.message}`);
+    }
+}
+
+// Fetch URLs from custom brand key
+async function fetchVibeMyAdUrls(brandKey) {
+    try {
+        const response = await fetch(`/fetch-images/${encodeURIComponent(brandKey)}`);
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`No images found for brand key: ${brandKey}`);
+            }
+            throw new Error(`Failed to fetch images: ${response.status} ${response.statusText}`);
+        }
+
+        const urls = await response.json();
+
+        if (!urls || urls.length === 0) {
+            throw new Error(`No images found for brand key: ${brandKey}`);
+        }
+
+        return urls;
+    } catch (err) {
+        console.error('Error fetching images:', err);
+        throw new Error(`Failed to fetch images for "${brandKey}": ${err.message}`);
+    }
 }
 
 // Load clusters from API
@@ -267,38 +329,64 @@ processBtn.addEventListener('click', async () => {
 
     let urls = [];
 
-    if (selectedDataset) {
-        urls = DATASET_URLS[selectedDataset];
-    } else {
-        urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u);
-
-        if (urls.length === 0) {
-            showStatus('Please select a dataset or enter at least one URL to process.', 'error');
-            return;
-        }
-
-        // Validate URLs
-        const invalidUrls = urls.filter(url => {
-            try {
-                new URL(url);
-                return false;
-            } catch {
-                return true;
-            }
-        });
-
-        if (invalidUrls.length > 0) {
-            showStatus(`Found ${invalidUrls.length} invalid URL(s). Please check your input.`, 'error');
-            return;
-        }
-    }
-
-    // Disable button and show loading state
-    processBtn.disabled = true;
-    btnText.innerHTML = '<div class="spinner"></div> Processing...';
-    showStatus(`Processing ${urls.length} image${urls.length > 1 ? 's' : ''}... This may take some time.`, 'loading');
-
     try {
+        if (selectedDataset === 'vibemyad') {
+            // VibeMyAd API with custom brand key
+            const brandKey = brandKeyInput.value.trim();
+
+            if (!brandKey) {
+                showStatus('Please enter a brand key for VibeMyAd API.', 'error');
+                brandKeyInput.focus();
+                return;
+            }
+
+            // Show fetching status
+            processBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Fetching images...';
+            showStatus(`Fetching images for brand: ${brandKey}...`, 'loading');
+
+            urls = await fetchVibeMyAdUrls(brandKey);
+            showStatus(`Found ${urls.length} images for "${brandKey}". Processing...`, 'loading');
+
+        } else if (selectedDataset) {
+            // Predefined datasets (nike, gonoise, levis-1)
+            processBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Fetching images...';
+            showStatus(`Fetching ${selectedDataset} dataset...`, 'loading');
+
+            urls = await fetchDatasetUrls(selectedDataset);
+            showStatus(`Found ${urls.length} images. Processing...`, 'loading');
+
+        } else {
+            // Custom URLs
+            urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u);
+
+            if (urls.length === 0) {
+                showStatus('Please select a dataset or enter at least one URL to process.', 'error');
+                return;
+            }
+
+            // Validate URLs
+            const invalidUrls = urls.filter(url => {
+                try {
+                    new URL(url);
+                    return false;
+                } catch {
+                    return true;
+                }
+            });
+
+            if (invalidUrls.length > 0) {
+                showStatus(`Found ${invalidUrls.length} invalid URL(s). Please check your input.`, 'error');
+                return;
+            }
+        }
+
+        // Disable button and show processing state
+        processBtn.disabled = true;
+        btnText.innerHTML = '<div class="spinner"></div> Processing...';
+        showStatus(`Processing ${urls.length} image${urls.length > 1 ? 's' : ''}... This may take some time.`, 'loading');
+
         const response = await fetch('/process', {
             method: 'POST',
             headers: {
@@ -322,8 +410,10 @@ processBtn.addEventListener('click', async () => {
         // Clear form
         urlsInput.value = '';
         clusterNameInput.value = '';
+        brandKeyInput.value = '';
         selectedDataset = null;
         datasetButtons.forEach(b => b.classList.remove('active'));
+        vibemyadSection.style.display = 'none';
         updateUrlCount();
 
         // Reload clusters after a short delay
