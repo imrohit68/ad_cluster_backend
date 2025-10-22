@@ -1,3 +1,15 @@
+# Ad Clustering Backend
+
+## 📑 Navigation
+
+- [Pipeline Architecture](#pipeline-architecture)
+- [Embedding Generation](#embedding-generation-custom-dinov2-implementation)
+- [Clustering Algorithm](#clustering-service-recursive-hierarchical-faiss-clustering)
+- [Ideal Architecture](#ideal-architecture)
+- [Run Locally](#-run-ad-clustering-project-locally)
+
+---
+
 # Pipeline Architecture
 ```mermaid
 graph TB
@@ -58,13 +70,11 @@ DINOv2 was selected after direct comparison with CLIP embeddings. For advertisem
 
 ### Why Local Deployment?
 
-We deploy DINOv2 locally to generate **custom attention-weighted embeddings** that cannot be obtained from API services:
-
+We deploy DINOv2 locally to generate **custom attention-weighted embeddings** that cannot be obtained from API services.
 
 ### Key Innovation: Attention-Based Foreground Emphasis
 
-The model's attention maps identify visually important regions (logos, text overlays, product placements). We extract attention weights from the last transformer layer and apply exponential scaling:
-
+The model's attention maps identify visually important regions (logos, text overlays, product placements). We extract attention weights from the last transformer layer and apply exponential scaling.
 
 The `emphasis_strength` parameter (default: 2.0) controls how aggressively foreground elements are prioritized—critical for ads where small brand elements or text overlays define visual identity.
 
@@ -72,7 +82,7 @@ The `emphasis_strength` parameter (default: 2.0) controls how aggressively foreg
 
 Combining CLS token (global), attention-weighted mean (2x for salient regions), and max-pooling (distinctive features) captures multi-scale information that significantly improves clustering quality for visually complex advertisements. This 3072-dimensional representation outperformed standard 768-dim embeddings in our testing.
 
-
+---
 
 # Clustering Service: Recursive Hierarchical FAISS Clustering
 
@@ -104,6 +114,8 @@ The fixed threshold increment strategy (0.05 steps) provides predictable behavio
 
 Instead of incrementing thresholds uniformly across all clusters, adapt the threshold based on cluster quality metrics. This would allow the algorithm to be more aggressive with loose clusters (larger threshold jumps) and more conservative with tight clusters (smaller threshold jumps), potentially improving both clustering quality and computational efficiency by reducing unnecessary recursion depth.
 
+---
+
 # Ideal Architecture
 
 ## Proposed Solution
@@ -128,3 +140,93 @@ Users can query the processing status using their job ID. The system maintains j
 
 This approach scales horizontally for uploads, reduces backend load by offloading file transfer to S3, and enables asynchronous processing that can handle variable clustering computation times without blocking client connections.
 
+---
+
+# 🧠 Run Ad Clustering Project Locally
+
+Follow these steps to set up and run the **Ad Clustering** project on your local machine.
+
+---
+
+## 🧩 1. Clone the Repository
+```bash
+git clone https://github.com/imrohit68/ad_cluster_backend.git
+cd ad-clustering
+```
+
+---
+
+## 🐍 2. Create and Activate Virtual Environment (Python 3.9.6)
+
+### Create venv
+```bash
+python3 -m venv .venv
+```
+
+### Activate venv
+
+🪟 **Windows:**
+```bash
+.venv\Scripts\activate
+```
+
+🐧 **macOS / Linux:**
+```bash
+source .venv/bin/activate
+```
+
+---
+
+## 📦 3. Install Dependencies
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+## ⚙️ 4. Configure Environment Variables
+
+Create a `.env` file in the project root with the following content:
+```env
+MONGO_URI=mongodb://localhost:27017
+DB_NAME=ad_cluster_db
+```
+
+⚠️ Make sure your MongoDB instance is running locally or provide a valid connection string.
+
+---
+
+## 🚀 5. Run the FastAPI Server
+```bash
+uvicorn app.main:app --reload
+```
+
+Server will start at:
+```
+http://127.0.0.1:8000
+```
+
+---
+
+## 🌐 6. Access the Application
+
+### 🧠 API Docs
+
+Visit the Swagger UI to interact with API endpoints:
+```
+http://127.0.0.1:8000/docs
+```
+
+### 🖼️ Web UI
+
+To access the frontend (static interface), go to:
+```
+http://127.0.0.1:8000/static
+```
+
+---
+
+## 📝 Notes
+
+The application requires MongoDB to store clustering results and job metadata. Ensure MongoDB is running before starting the server. You can verify the connection in the application logs on startup.
