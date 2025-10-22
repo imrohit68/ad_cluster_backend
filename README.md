@@ -49,3 +49,28 @@ graph TB
     H --> I
     H --> J
 ```
+
+## Embedding Generation: Custom DINOv2 Implementation
+
+### Why DINOv2 over CLIP?
+
+DINOv2 was selected after direct comparison with CLIP embeddings. For advertisement clustering, DINOv2 produced significantly better results by capturing visual similarity (layout patterns, color schemes, compositional elements) rather than semantic concepts. CLIP's text-alignment bias caused it to group ads by subject matter rather than creative style.
+
+### Why Local Deployment?
+
+We deploy DINOv2 locally to generate **custom attention-weighted embeddings** that cannot be obtained from API services:
+
+
+### Key Innovation: Attention-Based Foreground Emphasis
+
+The model's attention maps identify visually important regions (logos, text overlays, product placements). We extract attention weights from the last transformer layer and apply exponential scaling:
+
+
+The `emphasis_strength` parameter (default: 2.0) controls how aggressively foreground elements are prioritized—critical for ads where small brand elements or text overlays define visual identity.
+
+### Why 4x Concatenation?
+
+Combining CLS token (global), attention-weighted mean (2x for salient regions), and max-pooling (distinctive features) captures multi-scale information that significantly improves clustering quality for visually complex advertisements. This 3072-dimensional representation outperformed standard 768-dim embeddings in our testing.
+
+
+
