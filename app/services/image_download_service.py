@@ -1,14 +1,12 @@
 """
-Stateless Image Downloader for Production Use
----------------------------------------------
-Thread-safe and reusable instance for FastAPI apps.
+Image downloader service for downloading images with timeout and retry logic.
 """
 
 import concurrent.futures
 import requests
 import time
 from io import BytesIO
-from typing import List, Dict
+from typing import List, Dict, Optional
 from PIL import Image
 import logging
 
@@ -32,62 +30,6 @@ class ImageDownloader:
         self.max_retries = max_retries
         self.sleep_between_retries = sleep_between_retries
         self.vibe_my_ad_base_url = "https://vibemyad.com/api/test-assignment"
-
-    def _download_single(self, idx: int, url: str):
-        """Download one image with retry logic."""
-        for attempt in range(1, self.max_retries + 1):
-            start = time.time()
-            try:
-                resp = requests.get(url, timeout=self.timeout, stream=True)
-                resp.raise_for_status()
-
-                img = Image.open(BytesIO(resp.content)).convert("RGB")
-                elapsed = time.time() - start
-                return DownloadResult(index=idx, url=url, image=img, elapsed=elapsed)
-
-            except Exception as e:
-                if attempt < self.max_retries:
-                    logger.warning(f"[Retry {attempt}/{self.max_retries}] {url}: {e}")
-                    time.sleep(self.sleep_between_retries)
-                else:
-                    logger.error(f"Download failed for {url}: {e}")
-                    return DownloadError(index=idx, url=url, error=str(e))
-
-    def download_images(self, urls: List[str]) -> Dict[str, List]:
-        """Download multiple images concurrently."""
-        start_time = time.time()
-        downloaded, failed = [], []
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            futures = {
-                executor.submit(self._download_single, idx, url): url
-                for idx, url in enumerate(urls)
-            }
-
-            for future in concurrent.futures.as_completed(futures):
-                result = future.result()
-                if isinstance(result, DownloadResult):
-                    downloaded.append(result)
-                elif isinstance(result, DownloadError):
-                    failed.append(result)
-
-        total_time = time.time() - start_time
-        logger.info(
-            f"Download Summary → Success: {len(downloaded)} | Fail: {len(failed)} | "
-            f"Time: {total_time:.2f}s | Speed: {len(urls) / total_time:.2f} img/s"
-        )
-
-        return {
-            "success": downloaded,
-            "failed": failed,
-            "stats": {
-                "total": len(urls),
-                "successful": len(downloaded),
-                "failed": len(failed),
-                "total_time": total_time,
-                "avg_time_per_img": total_time / max(len(downloaded), 1)
-            }
-        }
 
     def fetch_image_urls(self,brand_key: str, timeout: int = 30) -> List[str]:
         """
@@ -113,3 +55,17 @@ class ImageDownloader:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching image URLs: {e}")
             return []
+
+    def download_single_image(self, url: str, timeout: int = 20, max_retries: int = 3) -> Optional[Dict]:
+        """Download a single image and return PIL Image."""
+        try:
+            response = requests.get(url, timeout=timeout, stream=True)
+            response.raise_for_status()
+
+            image_bytes = BytesIO(response.content)
+            image = Image.open(image_bytes).convert('RGB')
+
+            return {"success": True, "image": image}
+        except Exception as e:
+            logger.warning(f"Download failed: {url} - {e}")
+            return None

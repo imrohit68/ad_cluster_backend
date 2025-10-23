@@ -3,91 +3,661 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ad Clustering</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Ad Clustering - AI-Powered Image Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 1.5rem;
+            color: #212529;
+        }
+
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .header h1 {
+            color: #212529;
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            border: 1px solid #dee2e6;
+        }
+
+        .card-title {
+            color: #212529;
+            margin-bottom: 1.25rem;
+            font-size: 1rem;
+            font-weight: 600;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .clusters-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-label {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dataset-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .dataset-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .dataset-btn {
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .dataset-btn:hover {
+            border-color: #0d6efd;
+            background: #f8f9fa;
+        }
+
+        .dataset-btn.active {
+            border-color: #0d6efd;
+            background: #0d6efd;
+            color: white;
+        }
+
+        .dataset-btn-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .dataset-btn.active .dataset-btn-title {
+            color: white;
+        }
+
+        .input-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 0.625rem 0.875rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            font-size: 0.8rem;
+            resize: vertical;
+            transition: all 0.2s ease;
+            background: white;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        .url-counter {
+            text-align: right;
+            margin-top: 0.5rem;
+            color: #6c757d;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .url-counter span {
+            color: #0d6efd;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        #processBtn {
+            background: #0d6efd;
+            color: white;
+            position: relative;
+        }
+
+        #processBtn:hover:not(:disabled) {
+            background: #0b5ed7;
+        }
+
+        #processBtn.processing {
+            padding: 0;
+        }
+
+        #processBtn.processing .spinner {
+            margin: 0;
+        }
+
+        #clearBtn, #refreshBtn {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        #clearBtn:hover, #refreshBtn:hover {
+            background: #dee2e6;
+        }
+
+        #refreshBtn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            flex: none;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #status {
+            margin-top: 1.25rem;
+            padding: 0.875rem 1rem;
+            border-radius: 6px;
+            display: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        #status.show {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+
+        #status.loading {
+            background: #cfe2ff;
+            border-left: 3px solid #0d6efd;
+            color: #084298;
+        }
+
+        #status.success {
+            background: #d1e7dd;
+            border-left: 3px solid #198754;
+            color: #0f5132;
+        }
+
+        #status.error {
+            background: #f8d7da;
+            border-left: 3px solid #dc3545;
+            color: #842029;
+        }
+
+        .hint-text {
+            color: #6c757d;
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        #clustersContainer {
+            max-height: calc(100vh - 280px);
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        #clustersContainer::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #clustersContainer::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+
+        #clustersContainer::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 3px;
+        }
+
+        #clustersContainer::-webkit-scrollbar-thumb:hover {
+            background: #6c757d;
+        }
+
+        .cluster-card {
+            background: #f8f9fa;
+            padding: 1.25rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+        }
+
+        .cluster-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-color: #0d6efd;
+        }
+
+        .cluster-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .cluster-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+
+        .cluster-id {
+            font-size: 0.7rem;
+            color: #6c757d;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            background: #e9ecef;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .cluster-timestamp {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        .cluster-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0d6efd;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-top: 0.25rem;
+            font-weight: 600;
+        }
+
+        .cluster-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.625rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .detail-item {
+            font-size: 0.75rem;
+            color: #495057;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #6c757d;
+        }
+
+        .loading-message .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e9ecef;
+            border-top-color: #0d6efd;
+            margin: 0 auto 1rem;
+        }
+
+        .loading-message p {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state strong {
+            display: block;
+            font-size: 1rem;
+            color: #212529;
+            margin-bottom: 0.5rem;
+        }
+
+        .back-btn {
+            padding: 0.625rem 1.25rem;
+            background: #0d6efd;
+            color: white;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+            margin-top: 0.75rem;
+        }
+
+        .back-btn:hover {
+            background: #0b5ed7;
+        }
+
+        .cluster-detail-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .cluster-detail-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+        }
+
+        .cluster-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .cluster-path {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+
+        .similarity-badge {
+            font-size: 0.75rem;
+            color: white;
+            background: #198754;
+            padding: 0.3rem 0.7rem;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .cluster-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .cluster-image {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .cluster-image:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+
+        .cluster-meta {
+            text-align: center;
+            padding-top: 0.75rem;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: center;
+            gap: 1.25rem;
+        }
+
+        .cluster-meta strong {
+            color: #0d6efd;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .cluster-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .cluster-details {
+                grid-template-columns: 1fr;
+            }
+
+            .dataset-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="main-container">
         <div class="header">
-            <h1>🎯 Ad Clustering</h1>
-            <p>Process and cluster your advertisement images using AI</p>
+            <h1>Ad Clustering</h1>
         </div>
 
         <div class="content-grid">
             <div class="card">
                 <div class="clusters-header">
-                    <h2 class="card-title">📊 Existing Clusters</h2>
-                    <button id="refreshBtn">🔄 Refresh</button>
+                    <h2 class="card-title">Existing Clusters</h2>
+                    <button id="refreshBtn">Refresh</button>
                 </div>
 
                 <div id="clustersContainer">
                     <div class="loading-message">
-                        <div class="spinner" style="border-color: #ddd; border-top-color: #667eea; margin: 0 auto;"></div>
-                        <p style="margin-top: 1rem;">Loading clusters...</p>
+                        <div class="spinner"></div>
+                        <p>Loading clusters...</p>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2 class="card-title">📤 Process Images</h2>
+                <h2 class="card-title">Process Images</h2>
 
                 <div class="dataset-section">
-                    <label>Select Data Source</label>
+                    <label class="section-label">Select Data Source</label>
                     <div class="dataset-buttons">
                         <button class="dataset-btn" data-dataset="nike">
-                            <div class="dataset-btn-icon">👟</div>
-                            <div class="dataset-btn-title">Nike Dataset</div>
+                            <div class="dataset-btn-content">
+                                <div class="dataset-btn-title">Nike Dataset</div>
+                            </div>
                         </button>
                         <button class="dataset-btn" data-dataset="gonoise">
-                            <div class="dataset-btn-icon">🎧</div>
-                            <div class="dataset-btn-title">GoNoise Dataset</div>
+                            <div class="dataset-btn-content">
+                                <div class="dataset-btn-title">GoNoise Dataset</div>
+                            </div>
                         </button>
                         <button class="dataset-btn" data-dataset="levis-1">
-                            <div class="dataset-btn-icon">👖</div>
-                            <div class="dataset-btn-title">Levi's Dataset</div>
+                            <div class="dataset-btn-content">
+                                <div class="dataset-btn-title">Levi's Dataset</div>
+                            </div>
                         </button>
                         <button class="dataset-btn" data-dataset="vibemyad">
-                            <div class="dataset-btn-icon">🌐</div>
-                            <div class="dataset-btn-title">VibeMyAd API</div>
+                            <div class="dataset-btn-content">
+                                <div class="dataset-btn-title">VibeMyAd API</div>
+                            </div>
                         </button>
                     </div>
                 </div>
 
-                <div class="name-input-section">
-                    <label for="clusterName">Cluster Job Name *</label>
+                <div class="input-group">
+                    <label class="input-label" for="clusterName">Cluster Job Name *</label>
                     <input
                         type="text"
                         id="clusterName"
-                        placeholder="Enter a name for this clustering job (required)"
+                        placeholder="Enter a descriptive name for this job"
                     />
                 </div>
 
-                <div class="vibemyad-input-section" id="vibemyadSection" style="display: none;">
-                    <label for="brandKey">Brand Key (for VibeMyAd API) *</label>
+                <div class="input-group" id="vibemyadSection" style="display: none;">
+                    <label class="input-label" for="brandKey">Brand Key *</label>
                     <input
                         type="text"
                         id="brandKey"
                         placeholder="e.g., uber, nike, adidas"
                     />
-                    <p class="example-text">💡 Enter the brand key to fetch images from VibeMyAd API</p>
+                    <p class="hint-text">Enter the brand key to fetch images from VibeMyAd API</p>
                 </div>
 
-                <div class="input-section">
-                    <label for="urlsInput">Or Enter Custom Image URLs</label>
+                <div class="input-group">
+                    <label class="input-label" for="urlsInput">Or Enter Custom Image URLs</label>
                     <textarea
                         id="urlsInput"
-                        placeholder="https://example.com/ad1.jpg
-https://example.com/ad2.jpg
-https://example.com/ad3.jpg"
+                        placeholder="https://example.com/ad1.jpg&#10;https://example.com/ad2.jpg&#10;https://example.com/ad3.jpg"
                     ></textarea>
                     <div class="url-counter">
                         <span id="urlCount">0</span> URLs entered
                     </div>
-                    <p class="example-text">💡 Tip: Enter one URL per line</p>
+                    <p class="hint-text">Enter one URL per line</p>
                 </div>
 
                 <div class="button-group">
-                    <button id="clearBtn">Clear</button>
+                    <button id="clearBtn">Clear All</button>
                     <button id="processBtn">
                         <span id="btnText">Process Images</span>
                     </button>
@@ -98,6 +668,443 @@ https://example.com/ad3.jpg"
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // DOM Elements
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const urlsInput = document.getElementById('urlsInput');
+        const clusterNameInput = document.getElementById('clusterName');
+        const brandKeyInput = document.getElementById('brandKey');
+        const vibemyadSection = document.getElementById('vibemyadSection');
+        const statusDiv = document.getElementById('status');
+        const urlCount = document.getElementById('urlCount');
+        const btnText = document.getElementById('btnText');
+        const clustersContainer = document.getElementById('clustersContainer');
+        const datasetButtons = document.querySelectorAll('.dataset-btn');
+
+        let selectedDataset = null;
+
+        // Dataset selection handlers
+        datasetButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const dataset = btn.dataset.dataset;
+                if (selectedDataset === dataset) {
+                    selectedDataset = null;
+                    btn.classList.remove('active');
+                    if (dataset === 'vibemyad') {
+                        vibemyadSection.style.display = 'none';
+                        brandKeyInput.value = '';
+                    }
+                } else {
+                    datasetButtons.forEach(b => b.classList.remove('active'));
+                    selectedDataset = dataset;
+                    btn.classList.add('active');
+                    clusterNameInput.focus();
+                    urlsInput.value = '';
+                    updateUrlCount();
+
+                    if (dataset === 'vibemyad') {
+                        vibemyadSection.style.display = 'block';
+                        brandKeyInput.focus();
+                    } else {
+                        vibemyadSection.style.display = 'none';
+                        brandKeyInput.value = '';
+                    }
+                }
+            });
+        });
+
+        // Update URL count
+        function updateUrlCount() {
+            const urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u);
+            urlCount.textContent = urls.length;
+        }
+
+        urlsInput.addEventListener('input', () => {
+            updateUrlCount();
+            if (urlsInput.value.trim()) {
+                selectedDataset = null;
+                datasetButtons.forEach(b => b.classList.remove('active'));
+                vibemyadSection.style.display = 'none';
+                brandKeyInput.value = '';
+            }
+        });
+
+        // Clear button handler
+        clearBtn.addEventListener('click', () => {
+            urlsInput.value = '';
+            clusterNameInput.value = '';
+            brandKeyInput.value = '';
+            selectedDataset = null;
+            datasetButtons.forEach(b => b.classList.remove('active'));
+            vibemyadSection.style.display = 'none';
+            updateUrlCount();
+            statusDiv.classList.remove('show');
+        });
+
+        // Show status message
+        function showStatus(message, type) {
+            statusDiv.className = `show ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Fetch URLs from predefined dataset
+        async function fetchDatasetUrls(datasetKey) {
+            try {
+                const response = await fetch(`/fetch-images/${datasetKey}`);
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`No images found for dataset: ${datasetKey}`);
+                    }
+                    throw new Error(`Failed to fetch dataset: ${response.status} ${response.statusText}`);
+                }
+
+                const urls = await response.json();
+
+                if (!urls || urls.length === 0) {
+                    throw new Error(`No images found for dataset: ${datasetKey}`);
+                }
+
+                return urls;
+            } catch (err) {
+                console.error(`Error fetching dataset ${datasetKey}:`, err);
+                throw new Error(`Failed to fetch ${datasetKey} dataset: ${err.message}`);
+            }
+        }
+
+        // Fetch URLs from custom brand key
+        async function fetchVibeMyAdUrls(brandKey) {
+            try {
+                const response = await fetch(`/fetch-images/${encodeURIComponent(brandKey)}`);
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`No images found for brand key: ${brandKey}`);
+                    }
+                    throw new Error(`Failed to fetch images: ${response.status} ${response.statusText}`);
+                }
+
+                const urls = await response.json();
+
+                if (!urls || urls.length === 0) {
+                    throw new Error(`No images found for brand key: ${brandKey}`);
+                }
+
+                return urls;
+            } catch (err) {
+                console.error('Error fetching images:', err);
+                throw new Error(`Failed to fetch images for "${brandKey}": ${err.message}`);
+            }
+        }
+
+        // Load clusters from API
+        async function loadClusters() {
+            try {
+                const response = await fetch('/jobs');
+                if (!response.ok) {
+                    throw new Error(`Failed to load clusters: ${response.status} ${response.statusText}`);
+                }
+
+                const clusters = await response.json();
+
+                if (clusters.length === 0) {
+                    clustersContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📂</div>
+                            <strong>No clusters found</strong>
+                            <p>Process some images to create your first cluster!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Sort clusters by timestamp (most recent first)
+                clusters.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                clustersContainer.innerHTML = clusters.map(cluster => `
+                    <div class="cluster-card" data-job-id="${cluster.id}">
+                        <div class="cluster-header">
+                            <div>
+                                <div class="cluster-name">${escapeHtml(cluster.name)}</div>
+                                <div class="cluster-id">ID: ${escapeHtml(cluster.id)}</div>
+                            </div>
+                            <div class="cluster-timestamp">${formatTimestamp(cluster.timestamp)}</div>
+                        </div>
+                        <div class="cluster-stats">
+                            <div class="stat-box">
+                                <span class="stat-value">${cluster.total_images}</span>
+                                <span class="stat-label">Images</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value">${cluster.total_clusters}</span>
+                                <span class="stat-label">Clusters</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-value">${cluster.embedding_dimension}</span>
+                                <span class="stat-label">Dimensions</span>
+                            </div>
+                        </div>
+                        <div class="cluster-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Avg Size:</span> ${cluster.cluster_sizes.mean.toFixed(2)}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Max Size:</span> ${cluster.cluster_sizes.max}
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Similarity:</span> ${(cluster.similarities.mean * 100).toFixed(2)}%
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Avg Depth:</span> ${cluster.depths.mean.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Add click handlers to cluster cards
+                document.querySelectorAll('.cluster-card').forEach(card => {
+                    card.addEventListener('click', handleClusterClick);
+                });
+
+            } catch (err) {
+                console.error('Error loading clusters:', err);
+                clustersContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <strong>Error loading clusters</strong>
+                        <p style="color: #842029; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Handle cluster card click
+        async function handleClusterClick(e) {
+            const clusterCard = e.currentTarget;
+            const jobId = clusterCard.dataset.jobId;
+
+            clusterCard.innerHTML = `
+                <div class="loading-message">
+                    <div class="spinner"></div>
+                    <p>Loading clusters for job ${escapeHtml(jobId)}...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/clusters/${jobId}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch clusters for job ${jobId}: ${response.status}`);
+                }
+
+                let clusters = await response.json();
+
+                // Filter clusters with 2+ images and sort
+                clusters = clusters.filter(c => c.size >= 2).sort((a, b) => {
+                    if (a.size === b.size) return b.similarity - a.similarity;
+                    return a.size - b.size;
+                });
+
+                if (clusters.length === 0) {
+                    clusterCard.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🕳️</div>
+                            <strong>No clusters found</strong>
+                            <p>This job has no multi-image clusters.</p>
+                            <button class="back-btn" onclick="loadClusters()">Back to Clusters</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const clustersHTML = clusters.map(cluster => `
+                    <div class="cluster-detail-card">
+                        <div class="cluster-detail-header">
+                            <div>
+                                <div class="cluster-path">Path: ${escapeHtml(cluster.hierarchy_path)}</div>
+                                <div style="font-size: 0.75rem; color: #6c757d; margin-top: 0.3rem;">${formatTimestamp(cluster.created_at)}</div>
+                            </div>
+                            <span class="similarity-badge">${(cluster.similarity * 100).toFixed(2)}% Similar</span>
+                        </div>
+                        <div class="cluster-images">
+                            ${cluster.images_urls.map(url => `
+                                <img src="${escapeHtml(url)}" alt="ad image" class="cluster-image" onerror="this.style.display='none'" />
+                            `).join('')}
+                        </div>
+                        <div class="cluster-meta">
+                            <span><strong>${cluster.size}</strong> images</span>
+                            <span>Depth:<strong>${cluster.depth}</strong></span></div></div>`).join('');
+                clusterCard.innerHTML = `
+                <div class="cluster-header">
+                    <div><div class="cluster-name">Clusters for Job ${escapeHtml(jobId)}</div></div>
+                    <button class="back-btn" onclick="loadClusters()">Back</button>
+                </div>
+                <div style="max-height: 500px; overflow-y: auto; padding-right: 0.5rem;">${clustersHTML}</div>
+            `;
+
+        } catch (err) {
+            console.error('Error loading cluster details:', err);
+            clusterCard.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">❌</div>
+                    <strong>Error loading cluster details</strong>
+                    <p style="color: #842029; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
+                    <button class="back-btn" onclick="loadClusters()">Back to Clusters</button>
+                </div>
+            `;
+        }
+    }
+
+    // Refresh button handler
+    refreshBtn.addEventListener('click', () => {
+        clustersContainer.innerHTML = `
+            <div class="loading-message">
+                <div class="spinner"></div>
+                <p>Refreshing clusters...</p>
+            </div>
+        `;
+        loadClusters();
+    });
+
+    // Process button handler
+    processBtn.addEventListener('click', async () => {
+        const clusterJobName = clusterNameInput.value.trim();
+
+        if (!clusterJobName) {
+            showStatus('Please enter a name for the clustering job.', 'error');
+            clusterNameInput.focus();
+            return;
+        }
+
+        let urls = [];
+
+        try {
+            if (selectedDataset === 'vibemyad') {
+                const brandKey = brandKeyInput.value.trim();
+
+                if (!brandKey) {
+                    showStatus('Please enter a brand key for VibeMyAd API.', 'error');
+                    brandKeyInput.focus();
+                    return;
+                }
+
+                processBtn.disabled = true;
+                processBtn.classList.add('processing');
+                btnText.innerHTML = '<div class="spinner"></div>';
+                showStatus(`Fetching images for brand: ${brandKey}...`, 'loading');
+
+                urls = await fetchVibeMyAdUrls(brandKey);
+                showStatus(`Found ${urls.length} images for "${brandKey}". Processing...`, 'loading');
+
+            } else if (selectedDataset) {
+                processBtn.disabled = true;
+                processBtn.classList.add('processing');
+                btnText.innerHTML = '<div class="spinner"></div>';
+                showStatus(`Fetching ${selectedDataset} dataset...`, 'loading');
+
+                urls = await fetchDatasetUrls(selectedDataset);
+                showStatus(`Found ${urls.length} images. Processing...`, 'loading');
+
+            } else {
+                urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u);
+
+                if (urls.length === 0) {
+                    showStatus('Please select a dataset or enter at least one URL to process.', 'error');
+                    return;
+                }
+
+                const invalidUrls = urls.filter(url => {
+                    try {
+                        new URL(url);
+                        return false;
+                    } catch {
+                        return true;
+                    }
+                });
+
+                if (invalidUrls.length > 0) {
+                    showStatus(`Found ${invalidUrls.length} invalid URL(s). Please check your input.`, 'error');
+                    return;
+                }
+            }
+
+            processBtn.disabled = true;
+            processBtn.classList.add('processing');
+            btnText.innerHTML = '<div class="spinner"></div>';
+            showStatus(`Processing ${urls.length} image${urls.length > 1 ? 's' : ''}... This may take some time.`, 'loading');
+
+            const response = await fetch('/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    cluster_job_name: clusterJobName,
+                    urls: urls
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || `Server error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const jobId = data.job_id || data.id || 'N/A';
+            showStatus(`Successfully processed images for Job ID: ${jobId}`, 'success');
+
+            // Clear form
+            urlsInput.value = '';
+            clusterNameInput.value = '';
+            brandKeyInput.value = '';
+            selectedDataset = null;
+            datasetButtons.forEach(b => b.classList.remove('active'));
+            vibemyadSection.style.display = 'none';
+            updateUrlCount();
+
+            // Reload clusters after a short delay
+            setTimeout(() => loadClusters(), 2000);
+
+        } catch (err) {
+            console.error('Processing error:', err);
+            showStatus(`Error: ${err.message}`, 'error');
+        } finally {
+            processBtn.disabled = false;
+            processBtn.classList.remove('processing');
+            btnText.textContent = 'Process Images';
+        }
+    });
+
+    // Initialize on page load
+    updateUrlCount();
+    loadClusters();
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter' && !processBtn.disabled) {
+            processBtn.click();
+        }
+    });
+</script>
 </body>
 </html>

@@ -11,7 +11,7 @@ logger.setLevel(logging.INFO)
 
 
 class DINOv2EmbeddingGenerator:
-    """Production-ready DINOv2 embedding generator for ad image deduplication."""
+    """DINOv2 embedding generator for ad image deduplication."""
 
     def __init__(self, model_name: str = "facebook/dinov2-large"):
         """

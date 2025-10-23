@@ -1,13 +1,12 @@
 """
-Production Pipeline: Image Download → Embedding → Clustering (Stateless)
-------------------------------------------------------------------------
-Thread-safe, stateless integration of modular services for production.
+Image Processing Pipeline Service which integrates downloading, embedding, and clustering and saves results to database.
 """
 import asyncio
 import functools
 import threading
 import queue
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 from typing import List, Dict, Optional
@@ -39,7 +38,7 @@ class PipelineConfig:
 
 
 class ProductionPipeline:
-    """Stateless production pipeline integrating download, embedding, and clustering."""
+    """Pipeline integrating download, embedding, and clustering with true parallelism."""
 
     def __init__(
         self,
@@ -53,8 +52,34 @@ class ProductionPipeline:
         self.embedder = embedder
         self.clusterer = clusterer
 
+    def _download_single_image(self, idx: int, url: str) -> Optional[Dict]:
+        """
+        Download a single image (called by ThreadPoolExecutor).
+
+        Returns:
+            Dict with index, url, and PIL Image, or None on failure
+        """
+        try:
+            result = self.downloader.download_single_image(
+                url=url,
+                timeout=self.config.download_timeout,
+                max_retries=self.config.download_max_retries
+            )
+
+            if result and result.get("success"):
+                return {
+                    "index": idx,
+                    "url": url,
+                    "image": result["image"]
+                }
+            return None
+
+        except Exception as e:
+            logger.warning(f"Download failed [{idx}]: {url[:50]}... - {e}")
+            return None
+
     def run_pipeline(self, urls: List[str], cluster_params: Optional[Dict] = None) -> Optional[Dict]:
-        """Run full production pipeline (stateless)."""
+        """Run full production pipeline with true parallel execution."""
 
         start_time = time.time()
         logger.info(f"Starting production pipeline for {len(urls)} URLs")
@@ -67,84 +92,136 @@ class ProductionPipeline:
         all_embeddings, all_metadata = [], []
         embed_times = []
         processed_count = 0
-        download_stats = {}
+        download_success_count = 0
+        download_failed_count = 0
 
-        # Producer thread
+        # Producer thread - streams downloads as they complete
         def producer():
-            nonlocal download_stats
+            nonlocal download_success_count, download_failed_count
+
             try:
-                logger.info("Producer: Starting image downloads")
-                result = self.downloader.download_images(urls)
-                download_stats = result["stats"]
+                logger.info(f"Producer: Starting parallel downloads ({self.config.max_download_workers} workers)")
 
-                for item in result["success"]:
-                    image_queue.put({
-                        "index": item.index,
-                        "url": item.url,
-                        "image": item.image
-                    })
+                # Use ThreadPoolExecutor to download images in parallel
+                with ThreadPoolExecutor(max_workers=self.config.max_download_workers) as executor:
+                    # Submit all download tasks
+                    futures = {
+                        executor.submit(self._download_single_image, idx, url): (idx, url)
+                        for idx, url in enumerate(urls)
+                    }
 
+                    # Stream results to queue as they complete
+                    for future in as_completed(futures):
+                        idx, url = futures[future]
+
+                        try:
+                            item = future.result()
+
+                            if item is not None:
+                                # Add to queue immediately (blocks if queue is full)
+                                image_queue.put(item)
+
+                                with results_lock:
+                                    download_success_count += 1
+
+                                if download_success_count % 10 == 0:
+                                    logger.info(
+                                        f"Downloaded: {download_success_count}/{len(urls)} "
+                                        f"(Queue: {image_queue.qsize()})"
+                                    )
+                            else:
+                                with results_lock:
+                                    download_failed_count += 1
+
+                        except Exception as e:
+                            logger.exception(f"Producer error processing future [{idx}]: {e}")
+                            with results_lock:
+                                download_failed_count += 1
+
+                # Signal completion to consumer
                 image_queue.put(done_signal)
-                logger.info("Producer: Downloads completed")
-            except Exception as e:
-                logger.exception(f"Producer error: {e}")
+                logger.info(
+                    f"Producer: Finished! Success: {download_success_count}, "
+                    f"Failed: {download_failed_count}"
+                )
 
-        # Consumer thread
+            except Exception as e:
+                logger.exception(f"Producer fatal error: {e}")
+                image_queue.put(done_signal)  # Ensure consumer can exit
+
+        # Consumer thread - processes embeddings in batches
         def consumer():
             nonlocal processed_count
             batch_images, batch_urls, batch_indices = [], [], []
             batch_num = 0
 
+            logger.info("Consumer: Starting embedding generation")
+
             while True:
                 try:
-                    item = image_queue.get(timeout=1.0)
-                except queue.Empty:
-                    continue
+                    # Get item from queue (blocks if empty)
+                    try:
+                        item = image_queue.get(timeout=1.0)
+                    except queue.Empty:
+                        continue
 
-                if item is done_signal:
-                    if batch_images:
+                    # Check for completion signal
+                    if item is done_signal:
+                        logger.info("Consumer: Received completion signal")
+
+                        # Process remaining batch
+                        if batch_images:
+                            logger.info(f"Processing final batch ({len(batch_images)} images)")
+                            batch_num += 1
+                            self._process_batch(
+                                batch_images, batch_indices, batch_urls,
+                                all_embeddings, all_metadata, embed_times, results_lock, batch_num
+                            )
+                        break
+
+                    # Add to current batch
+                    batch_images.append(item["image"])
+                    batch_urls.append(item["url"])
+                    batch_indices.append(item["index"])
+
+                    # Process batch when it reaches target size
+                    if len(batch_images) >= self.config.embedding_batch_size:
+                        batch_num += 1
                         self._process_batch(
                             batch_images, batch_indices, batch_urls,
-                            all_embeddings, all_metadata, embed_times, results_lock, batch_num + 1
+                            all_embeddings, all_metadata, embed_times, results_lock, batch_num
                         )
-                    break
+                        batch_images, batch_urls, batch_indices = [], [], []
 
-                batch_images.append(item["image"])
-                batch_urls.append(item["url"])
-                batch_indices.append(item["index"])
+                    image_queue.task_done()
+                    processed_count += 1
 
-                if len(batch_images) >= self.config.embedding_batch_size:
-                    batch_num += 1
-                    self._process_batch(
-                        batch_images, batch_indices, batch_urls,
-                        all_embeddings, all_metadata, embed_times, results_lock, batch_num
-                    )
-                    batch_images, batch_urls, batch_indices = [], [], []
-
-                image_queue.task_done()
-                processed_count += 1
+                except Exception as e:
+                    logger.exception(f"Consumer error: {e}")
 
             logger.info(f"Consumer: Completed embedding generation for {processed_count} images")
 
         # Start threads
-        producer_thread = threading.Thread(target=producer, name="ProducerThread")
-        consumer_thread = threading.Thread(target=consumer, name="ConsumerThread")
+        producer_thread = threading.Thread(target=producer, name="ProducerThread", daemon=False)
+        consumer_thread = threading.Thread(target=consumer, name="ConsumerThread", daemon=False)
 
         producer_thread.start()
         consumer_thread.start()
+
+        # Wait for both to complete
         producer_thread.join()
         consumer_thread.join()
-
 
         # Combine embeddings
         final_embeddings = np.vstack(all_embeddings) if all_embeddings else np.array([])
         logger.info(f"Embedding phase complete: {final_embeddings.shape}")
 
+        # Run clustering
         clustering_result = None
 
         if processed_count > 0:
             params = {
-                "initial_threshold": 0.75,
+                "initial_threshold": 0.80,
                 "min_threshold": 0.96,
                 "threshold_step": 0.05,
                 "k_neighbors": 30,
@@ -175,21 +252,12 @@ class ProductionPipeline:
             clustering_result: Dict,
             clustering_job_name: str
     ) -> Optional[str]:
-        """
-        Save clustering result metadata to database.
-
-        Args:
-            clustering_result: Result dict from run_pipeline()
-
-        Returns:
-            Job ID string if successful, None if clustering_result is None
-        """
+        """Save clustering result metadata to database."""
         if clustering_result is None:
             logger.warning("No clustering result to save")
             return None
 
-        # Generate and save metadata
-        metadata = self.clusterer.get_metadata_model(clustering_result,clustering_job_name)
+        metadata = self.clusterer.get_metadata_model(clustering_result, clustering_job_name)
         clustering_jobs_collection = ClusteringJobRepository(mongodb.db["clustering_jobs"])
 
         job_id = await clustering_jobs_collection.save(metadata)
@@ -202,50 +270,29 @@ class ProductionPipeline:
             clustering_result: Dict,
             job_id: str
     ) -> Optional[list[str]]:
-        """
-        Generate cluster models from clustering result with given job ID.
-
-        Args:
-            clustering_result: Result dict from run_pipeline()
-            job_id: Parent job ID to associate clusters with
-
-        Returns:
-            List of Cluster models, or None if clustering_result is None
-        """
+        """Generate cluster models from clustering result with given job ID."""
         if clustering_result is None:
             logger.warning("No clustering result to process")
             return None
 
-        # Generate cluster models
-        cluster_models = self.clusterer.get_cluster_models(clustering_result,job_id)
-
+        cluster_models = self.clusterer.get_cluster_models(clustering_result, job_id)
         logger.info(f"Created {len(cluster_models)} clusters for job {job_id}")
 
         clustering_collection = ClusterRepository(mongodb.db["clusters"])
-
         result = await clustering_collection.batch_save(cluster_models)
 
         return result
 
-    import functools
-    from fastapi.concurrency import run_in_threadpool
-
     async def run_pipeline_and_save(
             self,
             urls: List[str],
-            clusteing_job_name: str,
+            clustering_job_name: str,
             cluster_params: Optional[Dict] = None
     ) -> Optional[str]:
         """
-        Run full pipeline in a thread (downloads + embeddings + clustering)
-        and save results to database asynchronously.
+        Run full pipeline in a thread and save results asynchronously.
 
-        Args:
-            urls: List of image URLs to process
-            cluster_params: Optional clustering parameters
-
-        Returns:
-            Job ID string if successful, None otherwise
+        This method is safe to call from FastAPI endpoints.
         """
         # Run the blocking pipeline in a thread to avoid blocking FastAPI event loop
         clustering_result = await run_in_threadpool(
@@ -253,7 +300,7 @@ class ProductionPipeline:
         )
 
         # Save clustering result asynchronously
-        job_id = await self.save_clustering_result(clustering_result, clusteing_job_name)
+        job_id = await self.save_clustering_result(clustering_result, clustering_job_name)
         if job_id:
             await self.save_clusters_with_job(clustering_result, job_id)
 
@@ -283,8 +330,7 @@ class ProductionPipeline:
 
             elapsed = time.time() - start
             embed_times.append(elapsed)
-            logger.info(f"Batch {batch_num} complete ({elapsed:.2f}s)")
+            logger.info(f"Batch {batch_num} complete ({elapsed:.2f}s, {len(images)/elapsed:.1f} img/s)")
 
         except Exception as e:
             logger.exception(f"Batch {batch_num} failed: {e}")
-

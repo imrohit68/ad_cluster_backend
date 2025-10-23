@@ -33,7 +33,6 @@ datasetButtons.forEach(btn => {
             urlsInput.value = '';
             updateUrlCount();
 
-            // Show/hide VibeMyAd section
             if (dataset === 'vibemyad') {
                 vibemyadSection.style.display = 'block';
                 brandKeyInput.focus();
@@ -77,7 +76,7 @@ clearBtn.addEventListener('click', () => {
 function showStatus(message, type) {
     statusDiv.className = `show ${type}`;
     let icon = type === 'loading' ? '⏳' : type === 'success' ? '✅' : '❌';
-    statusDiv.innerHTML = `<span class="status-icon">${icon}</span>${message}`;
+    statusDiv.innerHTML = `<span class="status-icon">${icon}</span><span>${message}</span>`;
 }
 
 // Format timestamp
@@ -163,8 +162,8 @@ async function loadClusters() {
             clustersContainer.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">📂</div>
-                    <p><strong>No clusters found</strong></p>
-                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">Process some images to create your first cluster!</p>
+                    <strong>No clusters found</strong>
+                    <p>Process some images to create your first cluster!</p>
                 </div>
             `;
             return;
@@ -198,13 +197,13 @@ async function loadClusters() {
                 </div>
                 <div class="cluster-details">
                     <div class="detail-item">
-                        <span class="detail-label">Avg Cluster Size:</span> ${cluster.cluster_sizes.mean.toFixed(2)}
+                        <span class="detail-label">Avg Size:</span> ${cluster.cluster_sizes.mean.toFixed(2)}
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Max Cluster Size:</span> ${cluster.cluster_sizes.max}
+                        <span class="detail-label">Max Size:</span> ${cluster.cluster_sizes.max}
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Avg Similarity:</span> ${(cluster.similarities.mean * 100).toFixed(2)}%
+                        <span class="detail-label">Similarity:</span> ${(cluster.similarities.mean * 100).toFixed(2)}%
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Avg Depth:</span> ${cluster.depths.mean.toFixed(2)}
@@ -223,8 +222,8 @@ async function loadClusters() {
         clustersContainer.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">❌</div>
-                <p><strong>Error loading clusters</strong></p>
-                <p style="font-size: 0.9rem; margin-top: 0.5rem; color: #c62828;">${escapeHtml(err.message)}</p>
+                <strong>Error loading clusters</strong>
+                <p style="color: #c62828; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
             </div>
         `;
     }
@@ -237,8 +236,8 @@ async function handleClusterClick(e) {
 
     clusterCard.innerHTML = `
         <div class="loading-message">
-            <div class="spinner" style="border-color: #ddd; border-top-color: #667eea; margin: 0 auto;"></div>
-            <p style="margin-top: 1rem;">Loading image clusters for job ${escapeHtml(jobId)}...</p>
+            <div class="spinner"></div>
+            <p>Loading clusters for job ${escapeHtml(jobId)}...</p>
         </div>
     `;
 
@@ -260,27 +259,31 @@ async function handleClusterClick(e) {
             clusterCard.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">🕳️</div>
-                    <p><strong>No clusters found</strong></p>
-                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">This job has no multi-image clusters.</p>
+                    <strong>No clusters found</strong>
+                    <p>This job has no multi-image clusters.</p>
+                    <button class="back-btn" onclick="loadClusters()">⬅️ Back to Clusters</button>
                 </div>
             `;
             return;
         }
 
         const clustersHTML = clusters.map(cluster => `
-            <div style="background:white; border:1px solid #ddd; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:15px; padding:1.5rem; margin-bottom:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+            <div class="cluster-detail-card">
+                <div class="cluster-detail-header">
                     <div>
-                        <div style="font-size:1.1rem; font-weight:600; color:#333; margin-bottom:0.3rem;">Path: ${escapeHtml(cluster.hierarchy_path)}</div>
-                        <div style="font-size:0.85rem; color:#666; background:rgba(0,0,0,0.05); padding:0.2rem 0.5rem; border-radius:5px; display:inline-block;">Similarity: ${(cluster.similarity * 100).toFixed(2)}%</div>
+                        <div class="cluster-path">Path: ${escapeHtml(cluster.hierarchy_path)}</div>
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 0.3rem;">🕒 ${formatTimestamp(cluster.created_at)}</div>
                     </div>
-                    <div style="font-size:0.85rem; color:#666;">🕒 ${formatTimestamp(cluster.created_at)}</div>
+                    <span class="similarity-badge">${(cluster.similarity * 100).toFixed(2)}% Similar</span>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
-                    ${cluster.images_urls.map(url => `<img src="${escapeHtml(url)}" alt="ad image" style="width:140px; height:140px; object-fit:cover; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.2);" onerror="this.style.display='none'" />`).join('')}
+                <div class="cluster-images">
+                    ${cluster.images_urls.map(url => `
+                        <img src="${escapeHtml(url)}" alt="ad image" class="cluster-image" onerror="this.style.display='none'" />
+                    `).join('')}
                 </div>
-                <div style="margin-top:1rem; text-align:center; color:#555; font-size:0.9rem;">
-                    <strong>${cluster.size}</strong> images · Depth: ${cluster.depth}
+                <div class="cluster-meta">
+                    <span><strong>${cluster.size}</strong> images</span>
+                    <span>Depth: <strong>${cluster.depth}</strong></span>
                 </div>
             </div>
         `).join('');
@@ -288,9 +291,9 @@ async function handleClusterClick(e) {
         clusterCard.innerHTML = `
             <div class="cluster-header">
                 <div><div class="cluster-name">🧩 Clusters for Job ${escapeHtml(jobId)}</div></div>
-                <button style="padding:6px 10px; border:none; background:#eee; border-radius:8px; cursor:pointer; font-weight:600;" onclick="loadClusters()">⬅️ Back</button>
+                <button class="back-btn" onclick="loadClusters()">⬅️ Back</button>
             </div>
-            <div style="max-height:600px; overflow-y:auto; padding-right:0.5rem;">${clustersHTML}</div>
+            <div style="max-height: 600px; overflow-y: auto; padding-right: 0.5rem;">${clustersHTML}</div>
         `;
 
     } catch (err) {
@@ -298,9 +301,9 @@ async function handleClusterClick(e) {
         clusterCard.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">❌</div>
-                <p><strong>Error loading cluster details</strong></p>
-                <p style="font-size: 0.9rem; margin-top: 0.5rem; color: #c62828;">${escapeHtml(err.message)}</p>
-                <button style="margin-top:1rem; padding:8px 16px; border:none; background:#667eea; color:white; border-radius:8px; cursor:pointer; font-weight:600;" onclick="loadClusters()">⬅️ Back to Clusters</button>
+                <strong>Error loading cluster details</strong>
+                <p style="color: #c62828; margin-top: 0.5rem;">${escapeHtml(err.message)}</p>
+                <button class="back-btn" onclick="loadClusters()">⬅️ Back to Clusters</button>
             </div>
         `;
     }
@@ -310,8 +313,8 @@ async function handleClusterClick(e) {
 refreshBtn.addEventListener('click', () => {
     clustersContainer.innerHTML = `
         <div class="loading-message">
-            <div class="spinner" style="border-color: #ddd; border-top-color: #667eea; margin: 0 auto;"></div>
-            <p style="margin-top: 1rem;">Refreshing clusters...</p>
+            <div class="spinner"></div>
+            <p>Refreshing clusters...</p>
         </div>
     `;
     loadClusters();
@@ -331,7 +334,6 @@ processBtn.addEventListener('click', async () => {
 
     try {
         if (selectedDataset === 'vibemyad') {
-            // VibeMyAd API with custom brand key
             const brandKey = brandKeyInput.value.trim();
 
             if (!brandKey) {
@@ -340,7 +342,6 @@ processBtn.addEventListener('click', async () => {
                 return;
             }
 
-            // Show fetching status
             processBtn.disabled = true;
             btnText.innerHTML = '<div class="spinner"></div> Fetching images...';
             showStatus(`Fetching images for brand: ${brandKey}...`, 'loading');
@@ -349,7 +350,6 @@ processBtn.addEventListener('click', async () => {
             showStatus(`Found ${urls.length} images for "${brandKey}". Processing...`, 'loading');
 
         } else if (selectedDataset) {
-            // Predefined datasets (nike, gonoise, levis-1)
             processBtn.disabled = true;
             btnText.innerHTML = '<div class="spinner"></div> Fetching images...';
             showStatus(`Fetching ${selectedDataset} dataset...`, 'loading');
@@ -358,7 +358,6 @@ processBtn.addEventListener('click', async () => {
             showStatus(`Found ${urls.length} images. Processing...`, 'loading');
 
         } else {
-            // Custom URLs
             urls = urlsInput.value.split('\n').map(u => u.trim()).filter(u => u);
 
             if (urls.length === 0) {
@@ -366,7 +365,6 @@ processBtn.addEventListener('click', async () => {
                 return;
             }
 
-            // Validate URLs
             const invalidUrls = urls.filter(url => {
                 try {
                     new URL(url);
@@ -382,7 +380,6 @@ processBtn.addEventListener('click', async () => {
             }
         }
 
-        // Disable button and show processing state
         processBtn.disabled = true;
         btnText.innerHTML = '<div class="spinner"></div> Processing...';
         showStatus(`Processing ${urls.length} image${urls.length > 1 ? 's' : ''}... This may take some time.`, 'loading');
@@ -405,7 +402,7 @@ processBtn.addEventListener('click', async () => {
 
         const data = await response.json();
         const jobId = data.job_id || data.id || 'N/A';
-        showStatus(`✅ Successfully processed images for Job ID: ${jobId}`, 'success');
+        showStatus(`Successfully processed images for Job ID: ${jobId}`, 'success');
 
         // Clear form
         urlsInput.value = '';
@@ -421,7 +418,7 @@ processBtn.addEventListener('click', async () => {
 
     } catch (err) {
         console.error('Processing error:', err);
-        showStatus(`❌ Error: ${err.message}`, 'error');
+        showStatus(`Error: ${err.message}`, 'error');
     } finally {
         processBtn.disabled = false;
         btnText.textContent = 'Process Images';
@@ -432,7 +429,7 @@ processBtn.addEventListener('click', async () => {
 updateUrlCount();
 loadClusters();
 
-// Add keyboard shortcuts
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'Enter' && !processBtn.disabled) {
         processBtn.click();
