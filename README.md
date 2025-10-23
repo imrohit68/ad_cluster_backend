@@ -147,4 +147,4 @@ This approach scales horizontally for uploads, reduces backend load by offloadin
 
 # Metrics
 
-- **Pipeline execution time:** On Mac M1, full pipeline takes around **100 seconds for 250 images**.
+- **Pipeline execution time:** On Mac M1, full pipeline takes around **50-55 seconds for 250 images**.
