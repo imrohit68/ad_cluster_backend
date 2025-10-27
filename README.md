@@ -147,4 +147,16 @@ This approach scales horizontally for uploads, reduces backend load by offloadin
 
 # Metrics
 
-- **Pipeline execution time:** On Mac M1, full pipeline takes around **50-55 seconds for 250 images**.
+## Performance Benchmarks
+
+- **Pipeline execution time:** On Mac M1, full pipeline takes **50-55 seconds for 250 images**.
+
+## Clustering Quality
+
+| Dataset   | Precision | Recall | F1-Score |
+|-----------|-----------|--------|----------|
+| Nike      | 0.759     | 0.991  | 0.859    |
+| GoNoise   | 0.79      | 0.85   | 0.82     |
+| Levi’s    | 0.79      | 0.88   | 0.83     |
+| Uber      | 0.97      | 0.97   | 0.97     |
+
